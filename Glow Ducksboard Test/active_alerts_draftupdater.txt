@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby -wKU
+
+DUCKSBOARD_API='236705'
+require_relative 'mysql_query.rb'
+require_relative 'ducksboard_post.rb'
+require 'json'
+
+myquery=<<ENDQUERY
+
+SELECT DATE(a.updated_at) AS day, count(*) AS open_alerts FROM alerts a
+        WHERE a.updated_at > DATE_SUB(NOW(), INTERVAL 91 DAY) AND a.resolved =0 
+        GROUP  BY DATE(a.updated_at);
+
+ENDQUERY
+
+result = RobbieDash::MySql.runquery(myquery)
+result.each do |row|
+  puts row.inspect
+end
+
+quacks = Array.new # For Ducksboard
+result.each do |row|
+  quacks << {:timestamp => row['day'].strftime("%s").to_i,:value=> row['open_alerts'].to_i}
+end
+@output = RobbieDash::Ducksboard.post(DUCKSBOARD_API,quacks.to_json)
+puts @output

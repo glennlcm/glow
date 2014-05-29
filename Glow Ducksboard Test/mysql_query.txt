@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby -wKU
+
+require './load_config.rb'
+require 'rubygems'
+require 'bundler/setup'
+require 'mysql2'
+
+#   ___
+#  / _ \ _  _ ___ _ _ _  _
+# | (_) | || / -_) '_| || |
+#  \__\_\\_,_\___|_|  \_, |
+#                     |__/
+
+module RobbieDash
+
+  class MySql
+
+    def self.runquery(sql)
+      client = Mysql2::Client.new(
+        :host => APP_CONFIG['mysql_host'],
+        :username => APP_CONFIG['mysql_user'],
+        :password => APP_CONFIG['mysql_password'],
+        :database => APP_CONFIG['mysql_database']
+      )
+      client.query(sql)
+    end
+
+  end
+end

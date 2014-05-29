@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby -wKU
+
+DUCKSBOARD_API='236704'
+require_relative 'mysql_query.rb'
+require_relative 'ducksboard_post.rb'
+require 'json'
+
+myquery=<<ENDQUERY
+
+SELECT a.day,Count(DISTINCT a.campaign_id) AS active_campaigns
+FROM   apollo_mv_agg a
+        WHERE  a.day >= Date_sub(CURRENT_DATE, INTERVAL 91 DAY)
+GROUP  BY a.day;
+ENDQUERY
+
+result = RobbieDash::MySql.runquery(myquery)
+
+quacks = Array.new # For Ducksboard
+result.each do |row|
+  quacks << {:timestamp => row['day'].strftime("%s").to_i,:value=> row['active_campaigns']}
+end
+@output = RobbieDash::Ducksboard.post(DUCKSBOARD_API,quacks.to_json)
+puts @output

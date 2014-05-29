@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby -wKU
+
+DUCKSBOARD_API='236700'
+require_relative 'mysql_query.rb'
+require_relative 'ducksboard_post.rb'
+require 'json'
+
+myquery=<<ENDQUERY
+
+SELECT a.day,
+       (Count(DISTINCT l.id))/(Count(DISTINCT c.analyst_full_name)) AS li_per_analyst
+FROM   (SELECT a.day,
+               a.campaign_id
+        FROM   apollo_mv_agg a
+        WHERE  a.day >= Date_sub(CURRENT_DATE, INTERVAL 91 DAY)
+        GROUP  BY a.day,
+                  a.campaign_id) a,
+       line_item l,
+       campaign c
+WHERE  a.campaign_id = l.campaign_id
+   AND a.campaign_id = c.id
+GROUP  BY a.day;
+
+ENDQUERY
+
+result = RobbieDash::MySql.runquery(myquery)
+
+quacks = Array.new # For Ducksboard
+result.each do |row|
+  quacks << {:timestamp => row['day'].strftime("%s").to_i,:value=> row['li_per_analyst'].to_i}
+end
+@output = RobbieDash::Ducksboard.post(DUCKSBOARD_API,quacks.to_json)
+puts @output

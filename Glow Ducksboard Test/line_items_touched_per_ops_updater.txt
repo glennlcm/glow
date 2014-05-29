@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby -wKU
+
+DUCKSBOARD_API='236701'
+require_relative 'mysql_query.rb'
+require_relative 'ducksboard_post.rb'
+require 'json'
+
+myquery=<<ENDQUERY
+
+SELECT a.day,
+       Count(DISTINCT l.version_id)/
+       Count(DISTINCT l.last_modifying_user_id) AS line_items_per_active_ops
+FROM   (SELECT a.day,
+               a.campaign_id
+        FROM   apollo_mv_agg a
+        WHERE  a.day >= Date_sub(CURRENT_DATE, INTERVAL 31 DAY)
+        GROUP  BY a.day,
+                  a.campaign_id) a,
+       (SELECT l.version_id,
+               l.last_modifying_user_id,l.last_modified_time,
+               l.campaign_id
+        FROM   rfi_line_item_version l
+        WHERE  l.last_modified_time >= Date_sub(CURRENT_DATE, INTERVAL 31 DAY)
+           AND l.`last_modifying_user_id` NOT IN
+               ( 2063, 2109, 2111, 2779, 3133 )) l,
+             (SELECT u.full_name,u.id FROM rfi_user u WHERE u.is_ops AND NOT u.is_analyst AND NOT u.is_am AND NOT u.is_salesperson)  u
+WHERE  a.campaign_id = l.campaign_id
+AND l.last_modifying_user_id = u.id
+AND a.day = DATE(l.last_modified_time)
+GROUP  BY a.day
+
+ENDQUERY
+
+result = RobbieDash::MySql.runquery(myquery)
+
+quacks = Array.new # For Ducksboard
+result.each do |row|
+  quacks << {:timestamp => row['day'].strftime("%s").to_i,:value=> row['line_items_per_active_ops']}
+end
+@output = RobbieDash::Ducksboard.post(DUCKSBOARD_API,quacks.to_json)
+puts @output

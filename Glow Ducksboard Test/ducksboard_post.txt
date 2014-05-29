@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby -wKU
+
+require 'rubygems'
+require 'httparty'
+
+# 2013-09-07 make sure to keep machine on EST to report this consistently with MySQL
+module RobbieDash
+  class Ducksboard
+    def self.post(api_number,body_json)
+    	@auth = {:username => APP_CONFIG['ducksboard_api'], :password => APP_CONFIG['ducksboard_password']}
+      puts "BODY_JSON = \n" + body_json + "\nENDBODY_JSON"
+      @api_url = 'https://push.ducksboard.com/v/' + api_number
+      #puts @api_url
+      # TODO 2013-10-01 generate error when body_json is not valid JSON
+      @output = HTTParty.post(
+        @api_url,
+        :body => body_json,
+        :headers => { 'Content-Type' => 'application/json' },
+        :basic_auth => @auth
+      )
+    end
+  end
+end
